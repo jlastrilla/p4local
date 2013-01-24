@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="twm ph" basedir="." default="changeBuildDir">
+
+    <property file="twmbuild.properties"/>
+    <property name="tst-dir" location="test"/>
+    <property name="TALK" value="true"/>
+
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
+        <classpath>
+            <pathelement location="${twm_base}/lib/ant-contrib.jar"/>
+        </classpath>
+    </taskdef>
+
+    <target name="copyProp0" description="Copy *.properties.0 files to *.properties">
+        <!-- <copy file="add.content.to.your.adkglobal.properties.0" tofile="add.content.to.your.adkglobal.properties" /> -->
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <copy todir="${twm_base}/@{twmmod}">
+                    <fileset dir="${twm_base}/@{twmmod}">
+                        <include name="**/*.properties.0"/>
+                    </fileset>
+                    <mapper type="glob" from="*.properties.0" to="*.properties"/>
+                </copy>
+            </sequential>
+        </for>
+    </target>
+
+    <target name="changeBuildDir" depends="copyProp0"
+            description="Change the build.dir on build.properties files">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <!--
+                    <propertyfile file="add.content.to.your.adkglobal.properties"
+                        comment="Added by TWM build.xml">
+                        <entry key="mod.twm.@{twmmod}" value="${twm_base}/@{twmmod}" />
+                    </propertyfile>
+                    -->
+                <replace dir="${twm_base}/@{twmmod}">
+                    <include name="**/build.properties"/>
+                    <replacefilter token="${build_dir_old}" value="${build_dir_new}"/>
+                </replace>
+            </sequential>
+        </for>
+    </target>
+
+
+    <target name="changeADKGlobalProps"
+            description="Change the ADK global.properties file">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <propertyfile file="${build_dir_new}/global.properties" comment="Added by change.xml for TWM">
+                    <entry key="mod.twm.@{twmmod}" value="${twm_base}/@{twmmod}"/>
+                    <entry key="mod.twm.@{twmmod}.shared.jar" value="${twm_base}/@{twmmod}/lib/@{twmmod}.jar"/>
+                    <entry key="mod.twm.@{twmmod}.server.jar" value="${twm_base}/@{twmmod}/lib/@{twmmod}s.jar"/>
+                    <entry key="mod.twm.@{twmmod}.client.jar" value="${twm_base}/@{twmmod}/lib/@{twmmod}c.jar"/>
+                </propertyfile>
+            </sequential>
+        </for>
+    </target>
+
+    <target name="TWM_jars" description="Compile TWM modules">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <ant
+                        antfile="${twm_base}/@{twmmod}/build.xml"
+                        dir="${twm_base}/@{twmmod}" target="jars"
+                        />
+            </sequential>
+        </for>
+        <mkdir dir="${twm_base}/modules"/>
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <copy todir="${twm_base}/modules" flatten="true">
+                    <fileset dir="${twm_base}/@{twmmod}">
+                        <include name="**/*.jar"/>
+                    </fileset>
+                </copy>
+            </sequential>
+        </for>
+    </target>
+
+    <target name="TWM_clean" description="Clean TWM modules">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <ant antfile="${twm_base}/@{twmmod}/build.xml"
+                     dir="${twm_base}/@{twmmod}"
+                     target="clean"/>
+            </sequential>
+        </for>
+        <delete dir="${twm_base}/modules"/>
+    </target>
+
+    <target name="TWM_som" description="Generate TWM SOM files">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+
+                <available file="${twm_base}/@{twmmod}/Server/build.xml" property="@{twmmod}server.present"/>
+                <if>
+                    <equals arg1="${@{twmmod}server.present}" arg2="true"/>
+                    <then>
+                        <ant
+                                antfile="${twm_base}/@{twmmod}/Server/build.xml"
+                                dir="${twm_base}/@{twmmod}/Server" target="som"
+                                />
+                    </then>
+                </if>
+                <available file="${twm_base}/@{twmmod}/Inferior/build.xml" property="@{twmmod}inferior.present"/>
+                <if>
+                    <equals arg1="${@{twmmod}inferior.present}" arg2="true"/>
+                    <then>
+                        <ant
+                                antfile="${twm_base}/@{twmmod}/Inferior/build.xml"
+                                dir="${twm_base}/@{twmmod}/Inferior" target="som"
+                                />
+                    </then>
+                </if>
+
+
+            </sequential>
+        </for>
+        <mkdir dir="${twm_base}/modules"/>
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <copy todir="${twm_base}//modules" flatten="true">
+                    <fileset dir="${twm_base}/@{twmmod}">
+                        <include name="**/*.som"/>
+                    </fileset>
+                </copy>
+            </sequential>
+        </for>
+
+        <mkdir dir="${ph.base}/lib"/>
+
+        <!--
+          <copy file="${twm_base}/lib/ant-contrib.jar" todir="${ph.base}/lib" flatten="true" />
+          <copy file="${twm_base}/modules/skin.jar" todir="${ph.base}/lib"  flatten="true" />
+          <copy file="${twm_base}/modules/asybridge.som" todir="${ph.base}/lib"  flatten="true" />
+          <copy file="${twm_base}/modules/asybridge.jar" todir="${ph.base}/lib"  flatten="true" />
+          <copy file="${twm_base}/modules/asybridgec.jar" todir="${ph.base}/lib" flatten="true" />
+          <copy file="${twm_base}/modules/asybridges.jar" todir="${ph.base}/lib" flatten="true" />
+          -->
+    </target>
+
+    <target name="TWM_sync" description="Synchronize TWM modules">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <ant
+                        antfile="${twm_base}/@{twmmod}/build.xml"
+                        dir="${twm_base}/@{twmmod}" target="synchronize"
+                        />
+            </sequential>
+        </for>
+    </target>
+
+    <target name="TWM_isync" description="Synchronize TWM modules with Inferior Server and Client" depends="TWM_jars">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+            </sequential>
+        </for>
+    </target>
+
+    <target name="TWM_javadoc" description="Generates javadoc for TWM modules">
+        <for list="${twm_modules}" param="twmmod">
+            <sequential>
+                <ant
+                        antfile="${twm_base}/@{twmmod}/build.xml"
+                        dir="${twm_base}/@{twmmod}" target="javadoc"
+                        />
+            </sequential>
+        </for>
+    </target>
+    <target name="do-client">
+        <input addproperty="client.path" message="Select Client"
+               validargs="D:/so class/twm/twm2-ph-phase4/vasp,D:/so class/twm/twm2-ph-phase4/"/>
+        <exec dir="${client.path}/client/bin" executable="${client.path}/client/bin/client.bat">
+            <arg value="jpda"/>
+        </exec>
+    </target>
+
+
+    <target name="release" depends="TWM_clean,TWM_jars,TWM_som">
+        <for list="${twm_modules}" param="module">
+            <sequential>
+                <parallel>
+                    <mkdir dir="release/@{module}"/>
+                    <delete>
+                        <fileset dir="${basedir}/release/@{module}" includes="*.7z"/>
+                    </delete>
+                    <copy todir="release/@{module}" file="@{module}/lib/@{module}.jar"/>
+                    <copy todir="release/@{module}" file="@{module}/lib/@{module}c.jar"/>
+                    <copy todir="release/@{module}" file="@{module}/Server/modules/@{module}.som"/>
+
+                    <antcall target="compress">
+                        <param name="base" value="${basedir}"/>
+                        <param name="mod" value="@{module}"/>
+                    </antcall>
+
+                    <copy todir="D:/so class/twm/twm2-ph-phase4/client/web/lib" file="@{module}/lib/@{module}.jar"/>
+                    <copy todir="D:/so class/twm/twm2-ph-phase4/client/web/lib" file="@{module}/lib/@{module}c.jar"/>
+                    <copy todir="D:/so class/twm/twm2-ph-phase4/server/modules" file="@{module}/lib/@{module}s.jar"/>
+                    <copy todir="D:/so class/twm/twm2-ph-phase4/server/modules/ext" file="@{module}/lib/@{module}.jar"/>
+                </parallel>
+            </sequential>
+        </for>
+    </target>
+    <target name="compress">
+        <exec executable="${basedir}/7zip.bat" dir="${basedir}">
+            <arg value="${mod}"/>
+        </exec>
+    </target>
+
+    <target name="unit-test-1" >
+
+        <junit printsummary="yes" haltonfailure="yes">
+
+            <classpath>
+                <pathelement location="${project.class.path}"/>
+                <pathelement location="${build.tests}"/>
+                <pathelement path="${java.class.path}"/>
+            </classpath>
+
+            <test name="com.jenkov.test.MyUnitTest"
+                  haltonfailure="no" outfile="result">
+
+                <formatter type="plain"/>
+                <formatter type="xml"/>
+
+            </test>
+
+        </junit>
+    </target>
+</project>
